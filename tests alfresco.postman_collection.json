@@ -1,0 +1,296 @@
+{
+	"info": {
+		"_postman_id": "b8f94150-1403-4689-b26c-2b0b4eb8cb14",
+		"name": "tests alfresco",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "test le classement d'un noeud",
+			"item": [
+				{
+					"name": "Crée un fichier dans le site",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var data = pm.response.json();",
+									"console.log(data.entry.id);",
+									"pm.environment.set(\"nodeId\", data.entry.id);",
+									"",
+									"pm.test(\"Status code is 201\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test(\"Le nom est la_fraude.pdf\", function () {",
+									"    var name = data.entry.name;",
+									"    pm.expect(name).to.eql(\"la_fraude.pdf\");",
+									"});",
+									"",
+									"pm.test(\"Les propriétés sont définies\", function () {",
+									"    var properties = data.entry.properties;",
+									"    pm.expect(properties).to.have.property(\"cm:title\");",
+									"    pm.expect(properties).to.have.property(\"cm:description\");",
+									"});",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "filedata",
+									"type": "file",
+									"src": "/home/sebastien/Téléchargements/la_fraude.pdf"
+								},
+								{
+									"key": "name",
+									"value": "la_fraude.pdf",
+									"type": "text"
+								},
+								{
+									"key": "nodeType",
+									"value": "cm:content",
+									"type": "text"
+								},
+								{
+									"key": "relativePath",
+									"value": "postman/runner",
+									"type": "text"
+								},
+								{
+									"key": "cm:title",
+									"value": "Une Fraude",
+									"type": "text"
+								},
+								{
+									"key": "cm:description",
+									"value": "Un fichier de test crée avec Postman",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{host}}/alfresco/api/-default-/public/alfresco/versions/1/nodes/{{siteNodeId}}/children",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"alfresco",
+								"api",
+								"-default-",
+								"public",
+								"alfresco",
+								"versions",
+								"1",
+								"nodes",
+								"{{siteNodeId}}",
+								"children"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Le fichier est dans: site1/postman/runner",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"var jsonData = pm.response.json();",
+									"",
+									"pm.test(\"Le document est un enfant de: site1/postman/runner\", function () {",
+									"    var parentsName = jsonData.list.entries.map(e => e.entry).map(entry => entry.name);",
+									"    pm.expect(parentsName).contains(\"site1\");",
+									"    pm.expect(parentsName).contains(\"postman\");",
+									"    pm.expect(parentsName).contains(\"runner\");",
+									"});",
+									""
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"// On patiente 10 secondes pour le delais d'indexation de solr",
+									"setTimeout(() => {}, 12000);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"query\": {\n        \"query\": \"ANCESTOR:{{nodeId}}\"\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{host}}/alfresco/api/-default-/public/search/versions/1/search",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"alfresco",
+								"api",
+								"-default-",
+								"public",
+								"search",
+								"versions",
+								"1",
+								"search"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Le fichier a port parent: runner",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"var jsonData = pm.response.json();",
+									"var parentsName = jsonData.list.entries.map(e => e.entry).map(entry => entry.name);",
+									"",
+									"// On ne peut pas récupérer les parents de manière récursive sans passer par fts",
+									"// On ne peut pas utiliser fts après la création du noeud recherché à cause du délais d'indéxation",
+									"pm.test(\"Le document est un enfant de runner\", function () {",
+									"    pm.expect(parentsName).contains(\"runner\");",
+									"});",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{host}}/alfresco/api/-default-/public/alfresco/versions/1/nodes/{{nodeId}}/parents",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"alfresco",
+								"api",
+								"-default-",
+								"public",
+								"alfresco",
+								"versions",
+								"1",
+								"nodes",
+								"{{nodeId}}",
+								"parents"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Le fichier est supprimé",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 204\", function () {",
+									"    pm.response.to.have.status(204);",
+									"});",
+									""
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{host}}/alfresco/api/-default-/public/alfresco/versions/1/nodes/{{nodeId}}",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"alfresco",
+								"api",
+								"-default-",
+								"public",
+								"alfresco",
+								"versions",
+								"1",
+								"nodes",
+								"{{nodeId}}"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"auth": {
+		"type": "basic",
+		"basic": [
+			{
+				"key": "password",
+				"value": "admin",
+				"type": "string"
+			},
+			{
+				"key": "username",
+				"value": "admin",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	]
+}
